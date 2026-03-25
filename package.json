@@ -33,7 +33,10 @@
   "homepage": "https://neonloops.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/enderyildirim/neonloops"
+    "url": "https://github.com/neonloops/sdk-node"
+  },
+  "bugs": {
+    "url": "https://github.com/neonloops/sdk-node/issues"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^3.2.4",
