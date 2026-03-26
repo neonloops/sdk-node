@@ -152,7 +152,7 @@ export class WorkflowsResource {
     const body: Record<string, unknown> = {};
     if (options.name !== undefined) body.name = options.name;
     if (options.description !== undefined) body.description = options.description;
-    if (options.projectId !== undefined) body.projectId = options.projectId;
+    if (options.projectId !== undefined) body.project_id = options.projectId;
     if (options.nodes !== undefined) body.nodes = options.nodes;
     if (options.edges !== undefined) body.edges = options.edges;
     const raw = await this.client.post<ApiWorkflowDetail>("/api/v1/workflows", body);
