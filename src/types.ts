@@ -482,3 +482,17 @@ export interface ApiSessionMessage {
   type: string;
   created_at: string;
 }
+
+/** Pagination metadata returned by list endpoints */
+export interface PaginationMeta {
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+}
+
+/** Paginated list of sessions */
+export interface SessionList {
+  data: Session[];
+  pagination: PaginationMeta;
+}

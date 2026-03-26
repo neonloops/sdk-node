@@ -10,9 +10,11 @@ import type {
   ApprovalResponse,
   StreamEvent,
   Session,
+  SessionList,
   SessionMessage,
   ApiSession,
   ApiSessionMessage,
+  PaginationMeta,
 } from "./types";
 
 const DEFAULT_BASE_URL = "https://neonloops.com";
@@ -231,22 +233,31 @@ export class Runner {
    * List chat sessions for a workflow.
    *
    * @param workflowId - The workflow ID
-   * @returns Array of sessions (newest first)
+   * @param params - Optional pagination parameters (limit, offset)
+   * @returns Paginated list of sessions with pagination metadata
    */
-  async listSessions(workflowId: string): Promise<Session[]> {
+  async listSessions(
+    workflowId: string,
+    params?: { limit?: number; offset?: number },
+  ): Promise<SessionList> {
     const res = await this.client.get<{
       data: ApiSession[];
-      pagination: { total: number; limit: number; offset: number; has_more: boolean };
+      pagination: PaginationMeta;
     }>("/api/v1/sessions", {
       workflow_id: workflowId,
+      limit: params?.limit,
+      offset: params?.offset,
     });
-    return res.data.map((s) => ({
-      id: s.id,
-      workflowId: s.workflow_id,
-      title: s.title,
-      createdAt: s.created_at,
-      updatedAt: s.updated_at,
-    }));
+    return {
+      data: res.data.map((s) => ({
+        id: s.id,
+        workflowId: s.workflow_id,
+        title: s.title,
+        createdAt: s.created_at,
+        updatedAt: s.updated_at,
+      })),
+      pagination: res.pagination,
+    };
   }
 
   /**
