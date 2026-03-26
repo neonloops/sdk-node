@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { Runner } from "../runner";
+import { Runner, createInput } from "../runner";
 import { NeonloopsClient } from "../client";
 import type { ApiRunResponse, ApprovalResponse, StreamEvent, ApiSession, ApiSessionMessage } from "../types";
 import { WorkflowsResource, ProjectsResource } from "../resources";
@@ -165,6 +165,29 @@ describe("Runner", () => {
       });
     });
 
+    it("sends version in body when provided", async () => {
+      const apiResponse: ApiRunResponse = {
+        id: "run_5",
+        workflow_id: "wf_1",
+        status: "completed",
+        output: "Versioned",
+        metadata: { durationMs: 100, nodesExecuted: [] },
+      };
+      const runner = createRunner();
+      vi.mocked(NeonloopsClient.prototype.post).mockResolvedValue(apiResponse);
+
+      await runner.run("wf_1", {
+        input: [{ role: "user", content: "Hi" }],
+        version: 3,
+      });
+
+      expect(NeonloopsClient.prototype.post).toHaveBeenCalledWith("/api/v1/run", {
+        workflow_id: "wf_1",
+        input: [{ role: "user", content: "Hi" }],
+        version: 3,
+      });
+    });
+
     it("does not send sessionId or variables when not provided", async () => {
       const apiResponse: ApiRunResponse = {
         id: "run_4",
@@ -213,6 +236,34 @@ describe("Runner", () => {
       });
     });
 
+    it("sends version in body when provided", async () => {
+      const events: StreamEvent[] = [
+        { type: "run:complete", runId: "r1", status: "completed", durationMs: 100 },
+      ];
+
+      async function* mockStream() {
+        for (const e of events) yield e;
+      }
+
+      const runner = createRunner();
+      vi.mocked(NeonloopsClient.prototype.postStream).mockReturnValue(mockStream());
+
+      const collected: StreamEvent[] = [];
+      for await (const event of runner.runStream("wf_1", {
+        input: [{ role: "user", content: "Hi" }],
+        version: 5,
+      })) {
+        collected.push(event);
+      }
+
+      expect(collected).toEqual(events);
+      expect(NeonloopsClient.prototype.postStream).toHaveBeenCalledWith("/api/v1/run/stream", {
+        workflow_id: "wf_1",
+        input: [{ role: "user", content: "Hi" }],
+        version: 5,
+      });
+    });
+
     it("throws when workflowId is missing", async () => {
       const runner = createRunner();
       await expect(async () => {
@@ -225,6 +276,31 @@ describe("Runner", () => {
       await expect(async () => {
         for await (const _ of runner.runStream("wf_1", { input: [] })) { /* noop */ }
       }).rejects.toThrow("At least one input message is required");
+    });
+
+    it("sends sessionId and variables in body when provided", async () => {
+      async function* mockStream() {
+        yield { type: "run:complete" as const, runId: "r1", status: "completed" as const, durationMs: 50 };
+      }
+
+      const runner = createRunner();
+      vi.mocked(NeonloopsClient.prototype.postStream).mockReturnValue(mockStream());
+
+      const collected: StreamEvent[] = [];
+      for await (const event of runner.runStream("wf_1", {
+        input: [{ role: "user", content: "Hi" }],
+        sessionId: "sess_1",
+        variables: { lang: "en" },
+      })) {
+        collected.push(event);
+      }
+
+      expect(NeonloopsClient.prototype.postStream).toHaveBeenCalledWith("/api/v1/run/stream", {
+        workflow_id: "wf_1",
+        input: [{ role: "user", content: "Hi" }],
+        session_id: "sess_1",
+        variables: { lang: "en" },
+      });
     });
   });
 
@@ -436,15 +512,15 @@ describe("Runner", () => {
 
       const sessions = await runner.listSessions("wf_1");
 
-      expect(sessions).toHaveLength(2);
-      expect(sessions[0]).toEqual({
+      expect(sessions.data).toHaveLength(2);
+      expect(sessions.data[0]).toEqual({
         id: "sess_1",
         workflowId: "wf_1",
         title: "Chat 1",
         createdAt: "2026-03-16T00:00:00.000Z",
         updatedAt: "2026-03-16T01:00:00.000Z",
       });
-      expect(sessions[1]).toEqual({
+      expect(sessions.data[1]).toEqual({
         id: "sess_2",
         workflowId: "wf_1",
         title: "Chat 2",
@@ -466,7 +542,7 @@ describe("Runner", () => {
 
       const sessions = await runner.listSessions("wf_empty");
 
-      expect(sessions).toEqual([]);
+      expect(sessions.data).toEqual([]);
     });
   });
 
@@ -531,5 +607,17 @@ describe("Runner", () => {
 
       expect(messages).toEqual([]);
     });
+  });
+});
+
+describe("createInput()", () => {
+  it("creates a user input message", () => {
+    const input = createInput("user", "Hello!");
+    expect(input).toEqual({ role: "user", content: "Hello!" });
+  });
+
+  it("creates an assistant input message", () => {
+    const input = createInput("assistant", "Hi there!");
+    expect(input).toEqual({ role: "assistant", content: "Hi there!" });
   });
 });

@@ -276,6 +276,29 @@ describe("NeonloopsClient", () => {
     });
   });
 
+  describe("delete()", () => {
+    it("sends a DELETE request and returns parsed JSON", async () => {
+      const data = { success: true };
+      fetchMock.mockResolvedValue(mockResponse(200, data));
+
+      const client = createClient();
+      const result = await client.delete("/api/v1/workflows/wf_1");
+
+      expect(result).toEqual({ success: true });
+      const [, init] = fetchMock.mock.calls[0];
+      expect(init.method).toBe("DELETE");
+    });
+
+    it("returns undefined on 204 No Content", async () => {
+      fetchMock.mockResolvedValue(mockResponse(204));
+
+      const client = createClient();
+      const result = await client.delete("/api/v1/workflows/wf_1");
+
+      expect(result).toBeUndefined();
+    });
+  });
+
   describe("postStream()", () => {
     it("yields multiple SSE events in order", async () => {
       const events = [

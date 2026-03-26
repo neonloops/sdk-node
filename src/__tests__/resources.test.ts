@@ -173,7 +173,7 @@ describe("WorkflowsResource", () => {
       expect(client.post).toHaveBeenCalledWith("/api/v1/workflows", {
         name: "New WF",
         description: "desc",
-        projectId: "proj_1",
+        project_id: "proj_1",
       });
       expect(result.id).toBe("wf_1");
       expect(result.name).toBe("Test Workflow");
@@ -242,6 +242,49 @@ describe("WorkflowsResource", () => {
           publishedAt: "2025-06-15T12:00:00Z",
         },
       ]);
+    });
+  });
+
+  describe("getVersion()", () => {
+    it("calls GET /api/v1/workflows/:id/versions/:version and maps result", async () => {
+      const apiVersionDetail = {
+        ...apiVersion,
+        nodes: [{ id: "n1", type: "ai" }],
+        edges: [{ id: "e1", source: "n1", target: "n2" }],
+      };
+      vi.mocked(client.get).mockResolvedValue(apiVersionDetail);
+
+      const result = await workflows.getVersion("wf_1", 3);
+
+      expect(client.get).toHaveBeenCalledWith("/api/v1/workflows/wf_1/versions/3");
+      expect(result).toEqual({
+        id: "ver_1",
+        workflowId: "wf_1",
+        version: 3,
+        publishedAt: "2025-06-15T12:00:00Z",
+        nodes: [{ id: "n1", type: "ai" }],
+        edges: [{ id: "e1", source: "n1", target: "n2" }],
+      });
+    });
+  });
+
+  describe("rollback()", () => {
+    it("calls POST /api/v1/workflows/:id/rollback and maps result", async () => {
+      const apiRollbackResult = {
+        version: 2,
+        status: "published",
+        rolled_back_from: 3,
+      };
+      vi.mocked(client.post).mockResolvedValue(apiRollbackResult);
+
+      const result = await workflows.rollback("wf_1", 2);
+
+      expect(client.post).toHaveBeenCalledWith("/api/v1/workflows/wf_1/rollback", { version: 2 });
+      expect(result).toEqual({
+        version: 2,
+        status: "published",
+        rolledBackFrom: 3,
+      });
     });
   });
 

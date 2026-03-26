@@ -1,6 +1,6 @@
 {
   "name": "@neonloops/sdk",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "TypeScript SDK for Neonloops — run workflows via API",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
